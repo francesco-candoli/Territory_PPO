@@ -77,7 +77,8 @@ class PPOAgent:
     return advantages, returns
 
   def update(self, last_value=0.0):
-    #CHECCO: 5. per fare l'update calcola il GAE
+
+    #PPO: 5. GAE to update
     advantages, returns = self._compute_gae(last_value)
 
     obs = torch.as_tensor(np.array(self.buffer.obs), dtype=torch.float32, device=self.device)
@@ -86,7 +87,8 @@ class PPOAgent:
     advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
     returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
 
-    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+    #PPO: 6. +1e-8 to prevent the division by 0
+    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8) 
 
     stats = {"policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0, "n": 0}
 
@@ -99,13 +101,13 @@ class PPOAgent:
         mb_obs, mb_act = obs[mb], actions[mb] #observations e actions prese
         mb_old_lp, mb_advantages, mb_returns = old_log_probs[mb], advantages[mb], returns[mb] #policy vecchia, vantaggi e ritorni
 
-        dist = Categorical(logits=self.actor(mb_obs)) #distribuzione
+        dist = Categorical(logits=self.actor(mb_obs)) #distribution
         new_lp = dist.log_prob(mb_act) #new policy
         entropy = dist.entropy().mean() #mean entropy della distribuzione vecchia
 
-        ratio = torch.exp(new_lp - mb_old_lp) #ratio between new policy - old policy
+        ratio = torch.exp(new_lp - mb_old_lp) #ratio between new policy and old policy
         surr1 = ratio * mb_advantages
-        surr2 = torch.clamp(ratio, 1 - self.clip, 1 + self.clip) * mb_advantages
+        surr2 = torch.clamp(ratio, 1 - self.clip, 1 + self.clip) * mb_advantages 
         policy_loss = -torch.min(surr1, surr2).mean()
 
         values = self.critic(mb_obs).squeeze(-1)
@@ -132,6 +134,6 @@ class PPOAgent:
     torch.save({"actor": self.actor.state_dict(), "critic": self.critic.state_dict()}, path)
 
   def load(self, path):
-    ckpt = torch.load(path, map_location=self.device)
-    self.actor.load_state_dict(ckpt["actor"])
-    self.critic.load_state_dict(ckpt["critic"])
+    weight = torch.load(path, map_location=self.device)
+    self.actor.load_state_dict(weight["actor"])
+    self.critic.load_state_dict(weight["critic"])

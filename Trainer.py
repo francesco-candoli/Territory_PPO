@@ -1,7 +1,10 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from Environment import Moves
+from Environment import Moves 
+
+# In this file and in PPOAgent.py there are some comment just to help the prof/tutor 
+# to better understand the code related to PPO (that could be a mess)
 
 class Trainer:
   def __init__(self, env, agents, reward_fns, rollout_len=2048, device="cpu"):
@@ -26,11 +29,10 @@ class Trainer:
     update_stats = []
 
     while step_count < total_steps:
-      # --- raccogli un'azione per ogni agente ---
       actions = []
       pending = {}   # aid -> (obs, idx, logp, val) per gli agenti PPO
 
-      #CHECCO: 1. calcola action, logits(actor), action-state value(critic)
+      #PPO: 1. compute action, logits(w\ actor network), state value(w\ critic network) 
 
       for aid, agent in self.agents.items():
         idx, logp, val = agent.act(obs[aid])
@@ -38,17 +40,15 @@ class Trainer:
         if self._is_ppo(aid):
           pending[aid] = (obs[aid], idx, logp, val)
 
-      #CHECCO: 2. l'ambiente viene portato in avanti
+      #PPO: 2. the environment goes to the next step using the computed actions and an observation is made
 
-      # --- avanza l'ambiente ---
       next_obs, terminated, truncated, info = self.env.step(actions)
       done = terminated or truncated
 
-      #CHECCO: 3. sul nuovo state calcola la reward, poi immagazzina i valori dello stato precedente:
-      #           observation, idx_agente, logits(vecchi), value(vecchio),
-      #           reward acquisita, e se finisce l'episodio
+      #PPO: 3. The reward is computed using the old state and the observation after the action(new state)
+      #        the values are then stored inside the buffer
+      #        
 
-      # --- calcola la reward e immagazzina, solo per i PPO ---
       for aid in self.learners:
         o, idx, logp, val = pending[aid]
         r = self.reward_fns[aid].compute(prev_info, info, aid, terminated, truncated)
@@ -59,7 +59,7 @@ class Trainer:
       prev_info = info
       step_count += 1
 
-      # --- fine episodio: reset ---
+      # check, if the episode is finished, reset
       if done:
         episode += 1
         if episode % log_every == 0:
@@ -75,12 +75,12 @@ class Trainer:
         prev_info = info
         ep_return = {aid: 0.0 for aid in self.learners}
 
-      #CHECCO: 4. continua a immagazzinare finchè il rollout non è pieno, fa l'update che dentro di sè chiamerà GAE
+      #PPO: 4. continue to archive samples until the rollout is not full
+      #        update using the rollout content
 
-      # --- update PPO ogni rollout_len step ---
       if step_count % self.rollout_len == 0:
         for aid in self.learners:
-          # bootstrap value dello stato corrente (rollout troncato)
+          # bootstrap 
           if done:
             last_value = 0.0
           else:
