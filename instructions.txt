@@ -1,0 +1,45 @@
+Prepared example to run.
+!!! Check inside the main file to check for params, if no specified, default params are used
+
+1) smoke, sanity-check on the environment
+
+python main.py smoke --N 6 --max-step 50 --steps 20
+
+
+2) train, train one PPO agent (id 1) vs StaticAgent (id 2)
+   Reward variants: Dense / Terminal / Hybrid
+
+python main.py train --reward Dense --N 6 --steps 40 --max-step 20
+
+
+3) play, one match, saved as a GIF
+-----------------------------------------------
+static_vs_static (no weights):
+python main.py play --mode static_vs_static --N 15 --max-step 675 --seed 0 --fps 10
+
+ppo_vs_static (needs --weights-a = the PPO weight file):
+python main.py play --mode ppo_vs_static --weights-a data/models/weight_N15_Hybrid_2000000.pt --N 15 --max-step 675 --seed 0 --fps 10
+
+ppo_vs_ppo (needs --weights-a = agent 1, --weights-b = agent 2):
+python main.py play --mode ppo_vs_ppo --weights-a data/models/weight_N15_Dense_2000000.pt --weights-b data/models/weight_N15_Terminal_2000000.pt --N 15 --max-step 675 --seed 0 --fps 10
+
+
+
+4) eval, win-rate over many matches 
+
+ppo_vs_static (needs --weights):
+python main.py eval --mode ppo_vs_static --weights data/models/weight_N15_Hybrid_2000000.pt --games 100 --N 15 --max-step 675
+
+ppo_vs_ppo (needs --weights-a and --weights-b):
+python main.py eval --mode ppo_vs_ppo --weights-a data/models/weight_N15_Dense_2000000.pt --weights-b data/models/weight_N15_Terminal_2000000.pt --games 100 --N 15 --max-step 675
+
+
+
+5) tournament, full 4-way round robin 
+
+expects the three trained weights to already exist at the default paths
+
+python main.py tournament --games 100 --seeds 0 44 999 --N 15 --max-step 675
+
+Using custom (not default) weights:
+python main.py tournament --games 100 --seeds 0 44 999 --N 15 --max-step 675 --dense-weights data/models/weight_N15_Dense_custom.pt --terminal-weights data/models/weight_N15_Terminal_custom.pt --hybrid-weights data/models/weight_N15_Hybrid_custom.pt
